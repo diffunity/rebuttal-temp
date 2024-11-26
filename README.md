@@ -21,6 +21,8 @@ pip install .
 
 ## Usage
 
+* COMET & BLEURT
+
 ```
 python3 rebuttal.py \
     --hypo /path/to/fairseq.output \
@@ -29,3 +31,18 @@ python3 rebuttal.py \
 ```
 
 > target tsv must contain "src_text" and "tgt_text"
+
+
+* Significance test
+
+```
+python3 significance_test.py \
+    --baseline /path/to/fairseq.output \
+    --compare /path/to/fairseq.output \
+    --label /path/to/tsv["tgt_text"] \
+    --sample-size n \
+    --num-samples n \
+    --tokenized \
+```
+
+> note that you must extract "tgt_text" from tsv to use as input for "label" field
