@@ -59,7 +59,7 @@ def main():
     COMET = load_from_checkpoint(COMET_PATH)
     args = parse_args()
 
-    hypo = read_fairseq_output(args.hypo, args, "D-" if args.tokenized else "H-")
+    hypo = read_fairseq_output(args.hypo, args, "D-" if not args.tokenized else "H-")
     tgt_text = read_fairseq_output(args.hypo, args, "T-")
     tgt2hypo = {i[1]:j[1] for i,j in zip(tgt_text, hypo)}
     df = load_df_from_tsv(args.target)
@@ -73,7 +73,6 @@ def main():
             src_text.append(tgt2src[tgt])
             hypo.append(tgt2hypo[tgt])
             tgt_text.append(tgt)
-
     COMET_INPUT = format_for_comet(src_text, hypo, tgt_text)
     COMET_OUTPUT = COMET.predict(COMET_INPUT, batch_size=args.bsz, gpus=args.gpus)
     print("COMET SCORE: ", COMET_OUTPUT.system_score)

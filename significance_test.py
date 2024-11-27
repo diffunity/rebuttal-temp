@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import sacrebleu
 
+import csv
+from pathlib import Path
 
 def get_sufficient_stats(
     translations: List[str], references: List[str]
@@ -190,36 +192,48 @@ def parse_args():
 
     return args
 
-def read_fairseq_output(file, args):
+def read_fairseq_output(file, args, filter_):
     fairseq_output = [i.strip() for i in open(file, "r")]
-    filter_ =  "D-" if args.tokenized else "H-"
+    # filter_ =  "D-" if args.tokenized else "H-"
     fairseq_hypo = [i for i in fairseq_output if i.startswith(filter_)]
     fairseq_hypo = [(int(i.split("\t")[0].split("-")[-1]), i.split("\t")[-1]) for i in fairseq_hypo]
     fairseq_hypo = sorted(fairseq_hypo)
 
     return fairseq_hypo
 
+def load_df_from_tsv(path) -> pd.DataFrame:
+    _path = path if isinstance(path, str) else path.as_posix()
+    return pd.read_csv(
+        _path,
+        sep="\t",
+        header=0,
+        encoding="utf-8",
+        escapechar="\\",
+        quoting=csv.QUOTE_NONE,
+        na_filter=False,
+    )
+
 
 def main(args):
 
-    baseline_hypo = read_fairseq_output(args.baseline, args)
-    compare_hypo = read_fairseq_output(args.compare, args)
-
-    labels = [i.strip() for i in open(args.label, "r")]
+    baseline_hypo = read_fairseq_output(args.baseline, args, "D-" if args.tokenized else "H-")
+    compare_hypo = read_fairseq_output(args.compare, args, "D-" if args.tokenized else "H-")
+    labels = read_fairseq_output(args.baseline, args, "T-")
 
     assert len(baseline_hypo) == len(compare_hypo) == len(labels), "Wrong comparison!!"
 
     assert set([i[0] for i in baseline_hypo]) == set([i[0] for i in compare_hypo]), "Wrong comparison!"
     baseline_hypo = [i[-1] for i in baseline_hypo]
     compare_hypo = [i[-1] for i in compare_hypo]
+    labels = [i[-1] for i in labels]
 
     if args.tokenized:
         sb_tokenizer = sacrebleu.tokenizers.TOKENIZERS['13a']()
+        # sb_tokenizer = sacrebleu.tokenizers.Tokenizer13a()
         labels = [sb_tokenizer(i) for i in labels]
         baseline_hypo = [sb_tokenizer(i) for i in baseline_hypo]
         compare_hypo = [sb_tokenizer(i) for i in compare_hypo]
 
-    # breakpoint()
     baseline_stats: pd.DataFrame = get_sufficient_stats(
         translations=baseline_hypo, references=labels
     )
